@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Acquisto Nutrizione - Candito e Sciroppo</title>
+<meta name="description" content="Modulo d'ordine nutrizione api: candito e sciroppo. Tutti i prezzi sono ivati.">
+<style>
+  :root{
+    --bg:#f6f3ea; --card:#ffffff; --ink:#2b2a26; --muted:#6b675c;
+    --line:#e3ddcc; --accent:#c8860d; --accent-dark:#9a6608; --ok:#2e7d32; --err:#c62828;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+  .wrap{max-width:760px;margin:0 auto;padding:24px 16px 64px}
+  header{background:var(--accent);color:#fff;border-radius:12px 12px 0 0;padding:22px 24px}
+  header h1{margin:0;font-size:1.35rem;letter-spacing:.02em}
+  header p{margin:6px 0 0;font-weight:600;opacity:.95}
+  form{background:var(--card);border:1px solid var(--line);border-top:0;border-radius:0 0 12px 12px;padding:8px 24px 24px}
+  .field{padding:16px 0;border-bottom:1px solid var(--line)}
+  label{display:block;font-weight:600;margin-bottom:6px}
+  .req{color:var(--err)}
+  .hint{font-size:.85rem;color:var(--muted);margin-top:4px}
+  input[type=text],input[type=email],input[type=number]{
+    width:100%;padding:10px 12px;border:1px solid #cfc8b4;border-radius:8px;font:inherit;background:#fff}
+  input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+  h2.section{margin:28px 0 4px;padding:10px 14px;background:#fbf3df;border-left:4px solid var(--accent);
+    border-radius:6px;font-size:1rem;text-transform:uppercase}
+  .product{display:grid;grid-template-columns:1fr 120px;gap:8px 16px;align-items:end}
+  .product .desc{grid-column:1/-1;font-weight:600}
+  .product .qty label{font-weight:500;font-size:.85rem;color:var(--muted);margin-bottom:4px}
+  .product .sub{text-align:right;font-variant-numeric:tabular-nums}
+  .product .sub span{display:block;font-size:.8rem;color:var(--muted)}
+  .product .sub strong{font-size:1.1rem}
+  .total{margin-top:24px;display:flex;justify-content:space-between;align-items:center;
+    padding:16px 18px;background:var(--ink);color:#fff;border-radius:10px}
+  .total strong{font-size:1.4rem;font-variant-numeric:tabular-nums}
+  button{margin-top:24px;width:100%;padding:14px;border:0;border-radius:10px;background:var(--accent);
+    color:#fff;font:600 1.05rem/1 inherit;cursor:pointer}
+  button:hover{background:var(--accent-dark)}
+  button:disabled{opacity:.6;cursor:wait}
+  .msg{margin-top:16px;padding:12px 14px;border-radius:8px;display:none}
+  .msg.ok{display:block;background:#e8f5e9;color:var(--ok)}
+  .msg.err{display:block;background:#ffebee;color:var(--err)}
+  .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+  @media (max-width:480px){
+    header,form{padding-left:16px;padding-right:16px}
+    .product{grid-template-columns:1fr 1fr}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>ACQUISTO NUTRIZIONE – CANDITO E SCIROPPO</h1>
+    <p>Tutti i prezzi sono ivati</p>
+  </header>
+
+  <form id="ordine" novalidate>
+    <div class="field">
+      <label for="nome">Cognome Nome / Denominazione <span class="req">*</span></label>
+      <input type="text" id="nome" name="nome" required autocomplete="name">
+      <div class="hint">Scrivere cognome e nome per persone fisiche / ragione sociale per società</div>
+    </div>
+
+    <div class="field">
+      <label for="email">Email <span class="req">*</span></label>
+      <input type="email" id="email" name="email" required autocomplete="email" placeholder="esempio@esempio.com">
+    </div>
+
+    <h2 class="section">LAPED – Romiti anticipa pagamento</h2>
+    <div id="laped"></div>
+
+    <div class="total">
+      <span>TOTALE € DA PAGARE</span>
+      <strong id="totale">€ 0,00</strong>
+    </div>
+
+    <!-- campo anti-spam: deve restare vuoto -->
+    <div class="hp" aria-hidden="true">
+      <label for="website">Lasciare vuoto</label>
+      <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
+    </div>
+
+    <button type="submit" id="invia">Invia ordine</button>
+    <div id="msg" class="msg" role="status"></div>
+  </form>
+</div>
+
+<script>
+/* ============ CONFIGURAZIONE ============
+   Incolla qui l'URL della Web App di Google Apps Script
+   (vedi apps-script.gs). Se lasciato vuoto, il modulo apre
+   il client di posta con il riepilogo dell'ordine. */
+const ENDPOINT = "https://script.google.com/macros/s/AKfycbwdLeVK4y8osVpeAELD05lbKuP8M32koR3WP-v_U_pp0RCGMoLpSJXOA8ubXK8Hi3LA3g/exec";
+const EMAIL_FALLBACK = "alberto.romiti@gmail.com"; // es. "ordini@tuodominio.it"
+/* ======================================== */
+
+const PRODOTTI = [
+  {id:"candito_10kg_v15", gruppo:"laped", unita:"cartoni", prezzo:17.89,
+   desc:"CANDITO PER API – cartone da 10 kg – 10 vaschette da 1 kg – € 17,89 a cartone (€ 1,7,89/kg)"}, 
+  {id:"candito_12kg_v15", gruppo:"laped", unita:"cartoni", prezzo:19.464,
+   desc:"CANDITO PER API – cartone da 12 kg – 8 vaschette da 1,5 kg – € 19,464 a cartone (€ 1,622/kg)"},
+  {id:"candito_12kg_v2", gruppo:"laped", unita:"cartoni", prezzo:17.472,
+   desc:"CANDITO PER API – cartone da 12 kg – 6 vaschette da 2 kg – € 17,472 a cartone (€ 1,456/kg)"},
+  {id:"candito_blocco_15kg", gruppo:"laped", unita:"blocchi", prezzo:19.965,
+   desc:"CANDITO PER API – blocco da 15 kg – € 19,965 a blocco (€ 1,331/kg)"},
+  {id:"sciroppo_tanica_15lt", gruppo:"laped", unita:"taniche", prezzo:22.35,
+   desc:"SCIROPPO – tanica da 15 lt – € 22,35 a tanica (€ 1,49/kg)"},
+  {id:"sciroppo_secchio_25kg", gruppo:"laped", unita:"secchi", prezzo:37.25,
+   desc:"SCIROPPO – secchio da 25 kg – € 37,25 a secchio (€ 1,49/kg)"}, 
+];
+
+const eur = n => n.toLocaleString("it-IT",{style:"currency",currency:"EUR",minimumFractionDigits:2,maximumFractionDigits:2});
+
+// costruisce le righe prodotto
+PRODOTTI.forEach(p=>{
+  const el = document.createElement("div");
+  el.className = "field product";
+  el.innerHTML = `
+    <div class="desc">${p.desc}</div>
+    <div class="qty">
+      <label for="${p.id}">Numero ${p.unita}</label>
+      <input type="number" id="${p.id}" name="${p.id}" min="0" step="1" inputmode="numeric" value="0">
+    </div>
+    <div class="sub"><span>Totale riga</span><strong id="sub_${p.id}">€ 0,00</strong></div>`;
+  document.getElementById(p.gruppo).appendChild(el);
+});
+
+function calcola(){
+  let tot = 0;
+  PRODOTTI.forEach(p=>{
+    const q = Math.max(0, parseInt(document.getElementById(p.id).value,10) || 0);
+    const s = Math.round(q * p.prezzo * 100) / 100;
+    p.q = q; p.s = s; tot += s;
+    document.getElementById("sub_"+p.id).textContent = eur(s);
+  });
+  tot = Math.round(tot*100)/100;
+  document.getElementById("totale").textContent = eur(tot);
+  return tot;
+}
+document.getElementById("ordine").addEventListener("input", calcola);
+
+const msg = (t, ok) => { const m = document.getElementById("msg"); m.textContent = t; m.className = "msg " + (ok?"ok":"err"); };
+
+document.getElementById("ordine").addEventListener("submit", async e=>{
+  e.preventDefault();
+  const f = e.target;
+  if (f.website.value) return;                       // bot
+  const nome = f.nome.value.trim(), email = f.email.value.trim();
+  if (!nome){ msg("Inserisci cognome e nome o la denominazione.", false); f.nome.focus(); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ msg("Inserisci un indirizzo email valido.", false); f.email.focus(); return; }
+  const tot = calcola();
+  if (tot <= 0){ msg("Indica la quantità di almeno un prodotto.", false); return; }
+
+  const dati = new URLSearchParams({ data: new Date().toLocaleString("it-IT"), nome, email });
+  PRODOTTI.forEach(p=>{ dati.append(p.id+"_qta", p.q); dati.append(p.id+"_tot", p.s.toFixed(2)); });
+  dati.append("totale", tot.toFixed(2));
+
+  if (!ENDPOINT){
+    const righe = PRODOTTI.filter(p=>p.q>0).map(p=>`- ${p.desc}: ${p.q} ${p.unita} = ${eur(p.s)}`).join("\n");
+    const corpo = `Ordine nutrizione\n\nNominativo: ${nome}\nEmail: ${email}\n\n${righe}\n\nTOTALE DA PAGARE: ${eur(tot)}`;
+    location.href = `mailto:${EMAIL_FALLBACK}?subject=${encodeURIComponent("Ordine nutrizione - "+nome)}&body=${encodeURIComponent(corpo)}`;
+    return;
+  }
+
+  const btn = document.getElementById("invia");
+  btn.disabled = true; btn.textContent = "Invio in corso…";
+  try{
+    await fetch(ENDPOINT, { method:"POST", mode:"no-cors", body:dati });
+    msg(`Ordine inviato, grazie! Totale da pagare: ${eur(tot)}`, true);
+    f.reset(); calcola();
+  }catch(err){
+    msg("Errore di invio. Riprova tra qualche minuto.", false);
+  }finally{
+    btn.disabled = false; btn.textContent = "Invia ordine";
+  }
+});
+
+calcola();
+</script>
+</body>
+</html>
