@@ -91,10 +91,8 @@
 <script>
 /* ============ CONFIGURAZIONE ============
    Incolla qui l'URL della Web App di Google Apps Script
-   (vedi apps-script.gs). Se lasciato vuoto, il modulo apre
-   il client di posta con il riepilogo dell'ordine. */
+   (vedi apps-script.gs). */
 const ENDPOINT = "https://script.google.com/macros/s/AKfycbwdLeVK4y8osVpeAELD05lbKuP8M32koR3WP-v_U_pp0RCGMoLpSJXOA8ubXK8Hi3LA3g/exec";
-const EMAIL_FALLBACK = "alberto.romiti@gmail.com";
 /* ======================================== */
 
 const PRODOTTI = [
@@ -161,12 +159,7 @@ document.getElementById("ordine").addEventListener("submit", async e=>{
   PRODOTTI.forEach(p=>{ dati.append(p.id+"_qta", p.q); dati.append(p.id+"_tot", p.s.toFixed(2)); });
   dati.append("totale", tot.toFixed(2));
 
-  if (!ENDPOINT){
-    const righe = PRODOTTI.filter(p=>p.q>0).map(p=>`- ${p.desc}: ${p.q} ${p.unita} (${kgFmt(p.q*p.kg)}) = ${eur(p.s)}`).join("\n");
-    const corpo = `Ordine nutrizione\n\nNominativo: ${nome}\nEmail: ${email}\n\n${righe}\n\nTOTALE DA PAGARE: ${eur(tot)}`;
-    location.href = `mailto:${EMAIL_FALLBACK}?subject=${encodeURIComponent("Ordine nutrizione - "+nome)}&body=${encodeURIComponent(corpo)}`;
-    return;
-  }
+  if (!ENDPOINT){ msg("Invio ordini non configurato. Contatta l'organizzatore.", false); return; }
 
   const btn = document.getElementById("invia");
   btn.disabled = true; btn.textContent = "Invio in corso…";
