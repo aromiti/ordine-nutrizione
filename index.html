@@ -27,7 +27,7 @@
   input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
   h2.section{margin:28px 0 4px;padding:10px 14px;background:#fbf3df;border-left:4px solid var(--accent);
     border-radius:6px;font-size:1rem;text-transform:uppercase}
-  .product{display:grid;grid-template-columns:1fr 120px;gap:8px 16px;align-items:end}
+  .product{display:grid;grid-template-columns:1fr 100px 120px;gap:8px 16px;align-items:end}
   .product .desc{grid-column:1/-1;font-weight:600}
   .product .qty label{font-weight:500;font-size:.85rem;color:var(--muted);margin-bottom:4px}
   .product .sub{text-align:right;font-variant-numeric:tabular-nums}
@@ -46,7 +46,7 @@
   .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
   @media (max-width:480px){
     header,form{padding-left:16px;padding-right:16px}
-    .product{grid-template-columns:1fr 1fr}
+    .product{grid-template-columns:1fr 1fr 1fr;gap:8px 10px}
   }
 </style>
 </head>
@@ -98,20 +98,21 @@ const EMAIL_FALLBACK = "alberto.romiti@gmail.com";
 /* ======================================== */
 
 const PRODOTTI = [
-  {id:"candito_10kg_v1", gruppo:"laped", unita:"cartoni", prezzo:17.89,
+  {id:"candito_10kg_v1", gruppo:"laped", unita:"cartoni", prezzo:17.89, kg:10,
    desc:"CANDITO PER API – cartone da 10 kg – 10 vaschette da 1 kg – € 17,89 a cartone (€ 1,789/kg)"},
-  {id:"candito_12kg_v15", gruppo:"laped", unita:"cartoni", prezzo:19.464,
+  {id:"candito_12kg_v15", gruppo:"laped", unita:"cartoni", prezzo:19.464, kg:12,
    desc:"CANDITO PER API – cartone da 12 kg – 8 vaschette da 1,5 kg – € 19,464 a cartone (€ 1,622/kg)"},
-  {id:"candito_12kg_v2", gruppo:"laped", unita:"cartoni", prezzo:17.472,
+  {id:"candito_12kg_v2", gruppo:"laped", unita:"cartoni", prezzo:17.472, kg:12,
    desc:"CANDITO PER API – cartone da 12 kg – 6 vaschette da 2 kg – € 17,472 a cartone (€ 1,456/kg)"},
-  {id:"candito_blocco_15kg", gruppo:"laped", unita:"blocchi", prezzo:19.965,
+  {id:"candito_blocco_15kg", gruppo:"laped", unita:"blocchi", prezzo:19.965, kg:15,
    desc:"CANDITO PER API – blocco da 15 kg – € 19,965 a blocco (€ 1,331/kg)"},
-  {id:"sciroppo_tanica_15lt", gruppo:"laped", unita:"taniche", prezzo:22.35,
+  {id:"sciroppo_tanica_15lt", gruppo:"laped", unita:"taniche", prezzo:22.35, kg:15,
    desc:"SCIROPPO – tanica da 15 lt – € 22,35 a tanica (€ 1,49/kg)"},
-  {id:"sciroppo_secchio_25kg", gruppo:"laped", unita:"secchi", prezzo:37.25,
+  {id:"sciroppo_secchio_25kg", gruppo:"laped", unita:"secchi", prezzo:37.25, kg:25,
    desc:"SCIROPPO – secchio da 25 kg – € 37,25 a secchio (€ 1,49/kg)"}
 ];
 
+const kgFmt = n => n.toLocaleString("it-IT",{maximumFractionDigits:1}) + " kg";
 const eur = n => n.toLocaleString("it-IT",{style:"currency",currency:"EUR",minimumFractionDigits:2,maximumFractionDigits:2});
 
 // costruisce le righe prodotto
@@ -124,6 +125,7 @@ PRODOTTI.forEach(p=>{
       <label for="${p.id}">Numero ${p.unita}</label>
       <input type="number" id="${p.id}" name="${p.id}" min="0" step="1" inputmode="numeric" value="0">
     </div>
+    <div class="sub"><span>Totale kg</span><strong id="kg_${p.id}">0 kg</strong></div>
     <div class="sub"><span>Totale riga</span><strong id="sub_${p.id}">€ 0,00</strong></div>`;
   document.getElementById(p.gruppo).appendChild(el);
 });
@@ -135,6 +137,7 @@ function calcola(){
     const s = Math.round(q * p.prezzo * 100) / 100;
     p.q = q; p.s = s; tot += s;
     document.getElementById("sub_"+p.id).textContent = eur(s);
+    document.getElementById("kg_"+p.id).textContent = kgFmt(q * p.kg);
   });
   tot = Math.round(tot*100)/100;
   document.getElementById("totale").textContent = eur(tot);
@@ -159,7 +162,7 @@ document.getElementById("ordine").addEventListener("submit", async e=>{
   dati.append("totale", tot.toFixed(2));
 
   if (!ENDPOINT){
-    const righe = PRODOTTI.filter(p=>p.q>0).map(p=>`- ${p.desc}: ${p.q} ${p.unita} = ${eur(p.s)}`).join("\n");
+    const righe = PRODOTTI.filter(p=>p.q>0).map(p=>`- ${p.desc}: ${p.q} ${p.unita} (${kgFmt(p.q*p.kg)}) = ${eur(p.s)}`).join("\n");
     const corpo = `Ordine nutrizione\n\nNominativo: ${nome}\nEmail: ${email}\n\n${righe}\n\nTOTALE DA PAGARE: ${eur(tot)}`;
     location.href = `mailto:${EMAIL_FALLBACK}?subject=${encodeURIComponent("Ordine nutrizione - "+nome)}&body=${encodeURIComponent(corpo)}`;
     return;
